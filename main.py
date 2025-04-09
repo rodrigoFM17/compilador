@@ -159,12 +159,23 @@ def compile_code(input_file, debug=False):
     
     print("Compilación exitosa. No se encontraron errores.")
     print("\n=== TABLA DE SÍMBOLOS ===")
-    print("ÁMBITO".ljust(15) + "NOMBRE".ljust(15) + "TIPO".ljust(10) + "CONSTANTE".ljust(10) + "VALOR")
-    print("-" * 70)
+    print("ÁMBITO".ljust(20) + "NOMBRE".ljust(15) + "TIPO".ljust(10) + "CONSTANTE".ljust(10) + "VALOR")
+    print("-" * 75)
+
+    # Ordenar los símbolos por ámbito
+    symbols_by_scope = {}
     for scope_name, name, symbol in analyzer.symbol_table.get_all_symbols_with_scopes():
-        const_str = "Sí" if symbol.is_constant else "No"
-        value_str = str(symbol.value) if symbol.value is not None else "N/A"
-        print(f"{scope_name}".ljust(15) + f"{name}".ljust(15) + f"{symbol.type}".ljust(10) + f"{const_str}".ljust(10) + f"{value_str}")
+        if scope_name not in symbols_by_scope:
+            symbols_by_scope[scope_name] = []
+        symbols_by_scope[scope_name].append((name, symbol))
+
+    # Imprimir por ámbito
+    for scope_name, symbols in symbols_by_scope.items():
+        print(f"\n>> Ámbito: {scope_name}")
+        for name, symbol in symbols:
+            const_str = "Sí" if symbol.is_constant else "No"
+            value_str = str(symbol.value) if symbol.value is not None else "N/A"
+            print(f"  {name}".ljust(20) + f"{symbol.type}".ljust(10) + f"{const_str}".ljust(10) + f"{value_str}")
     
     return True
 

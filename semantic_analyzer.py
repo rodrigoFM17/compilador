@@ -469,7 +469,7 @@ class SemanticAnalyzer(MiLenguajeListener):
         self.symbol_table.declare(name, return_type, False, None, params_info)
         
         # Crear un nuevo ámbito para los parámetros y variables locales
-        self.symbol_table.enter_scope()
+        self.symbol_table.enter_scope(f"función_{name}")
         self.current_function_type = return_type
         self.has_return = False
         
@@ -513,7 +513,7 @@ class SemanticAnalyzer(MiLenguajeListener):
         self.symbol_table.declare(name, "void")
         
         # Crear un nuevo ámbito para los parámetros y variables locales
-        self.symbol_table.enter_scope()
+        self.symbol_table.enter_scope(f"función_{name}")
         
         # Procesar parámetros si los hay
         if ctx.parametros():
@@ -548,19 +548,19 @@ class SemanticAnalyzer(MiLenguajeListener):
 
     # Entrar a un ciclo o un if
     def enterEstructuraIf(self, ctx):
-        self.symbol_table.enter_scope()
+        self.symbol_table.enter_scope("if")
 
     def exitEstructuraIf(self, ctx):
         self.symbol_table.exit_scope()
 
     def enterCicloFor(self, ctx):
-        self.symbol_table.enter_scope()
+        self.symbol_table.enter_scope("for")
 
     def exitCicloFor(self, ctx):
         self.symbol_table.exit_scope()
 
     def enterCicloWhile(self, ctx):
-        self.symbol_table.enter_scope()
+        self.symbol_table.enter_scope("while")
 
     def exitCicloWhile(self, ctx):
         self.symbol_table.exit_scope()
