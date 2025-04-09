@@ -7,15 +7,16 @@ const str me = "sdfdsf";
 const ent y = 4 + 4 * 6 + 4;
 
 fct sumar(ent a, ent b) : ent {
+    ent c = 10;
     rtn a + b;
 }
+
+ent x = 1;
 
 ent res = sumar(x, 5);
 clg(res);
 
 str ms = scn();
-
-ent x = 1;
 
 while(x < 10){
     if(x == 10){

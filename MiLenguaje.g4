@@ -23,11 +23,30 @@ declaracion
 asignacion
     : ID '=' expresion ';'
     ;
-
-// Expresiones sin recursión a la izquierda
+// Expresiones con jerarquía de operaciones
 expresion
-    : termino (operadoresAritmeticos termino)*
+    : expresionAditiva
     ;
+
+expresionAditiva
+    : expresionMultiplicativa (operadoresAditivos expresionMultiplicativa)*
+    ;
+
+expresionMultiplicativa
+    : termino (operadoresMultiplicativos termino)*
+    ;
+
+operadoresAditivos
+    : '+'
+    | '-'
+    ;
+
+operadoresMultiplicativos
+    : '*'
+    | '/'
+    | '%'
+    ;
+    
 
 termino
     : llamadaFuncion
@@ -96,14 +115,6 @@ retornoSentencia
 
 kwScn
     : 'scn' '(' ')'
-    ;
-
-operadoresAritmeticos
-    : '+'
-    | '-'
-    | '*'
-    | '/'
-    | '%'    // Agregado el operador módulo que podría estar faltando
     ;
 
 operadoresComparacion

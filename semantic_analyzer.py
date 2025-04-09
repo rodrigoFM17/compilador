@@ -11,6 +11,18 @@ class SemanticAnalyzer(MiLenguajeListener):
         self.current_function_type = None  # Para verificar el tipo de retorno
         self.has_return = False  # Para verificar si una función tiene retorno
 
+    def get_param_type(self, tipo_ctx):
+        """Obtiene el tipo de un parámetro a partir de su contexto"""
+        if tipo_ctx.kwEnt():
+            return "ent"
+        elif tipo_ctx.kwFlt():
+            return "flt"
+        elif tipo_ctx.kwLg():
+            return "lg"
+        elif tipo_ctx.kwStr():
+            return "str"
+        return None
+
     def get_errors(self):
         return self.errors
 
@@ -45,10 +57,10 @@ class SemanticAnalyzer(MiLenguajeListener):
 
     def evaluate_expression(self, ctx):
         """Evalúa una expresión y retorna su valor si es posible."""
-        # Si es solo un término sin operadores
+        # Si solo hay un término sin operadores
         if len(ctx.termino()) == 1 and not ctx.operadoresAritmeticos():
             return self.evaluate_term(ctx.termino(0))
-        
+            
         # Si hay operadores aritméticos
         if ctx.operadoresAritmeticos():
             # Evaluar el primer término
@@ -67,29 +79,127 @@ class SemanticAnalyzer(MiLenguajeListener):
                 if term_value is None:
                     return None
                 
-                # Realizar la operación
-                if op.getText() == '+':
-                    result += term_value
-                elif op.getText() == '-':
-                    result -= term_value
-                elif op.getText() == '*':
+                # Realizar la operación con prioridad
+                op_text = op.getText()
+                if op_text == '*':
                     result *= term_value
-                elif op.getText() == '/':
+                elif op_text == '/':
                     # Evitar división por cero
                     if term_value == 0:
                         self.add_error(ctx, "División por cero")
                         return None
                     result /= term_value
-                elif op.getText() == '%':
+                elif op_text == '%':
                     # Evitar módulo por cero
                     if term_value == 0:
                         self.add_error(ctx, "Módulo por cero")
                         return None
                     result %= term_value
+                elif op_text == '+':
+                    result += term_value
+                elif op_text == '-':
+                    result -= term_value
             
             return result
         
         return None
+
+    
+    def evaluate_additive_expression(self, ctx):
+        """Evalúa una expresión aditiva."""
+        # Evaluar primera expresión multiplicativa
+        result = self.evaluate_multiplicative_expression(ctx.expresionMultiplicativa(0))
+        if result is None:
+            return None
+        
+        # Aplicar operadores aditivos
+        for i, op in enumerate(ctx.operadoresAditivos()):
+            term_value = self.evaluate_multiplicative_expression(ctx.expresionMultiplicativa(i + 1))
+            if term_value is None:
+                return None
+            
+            if op.getText() == '+':
+                result += term_value
+            elif op.getText() == '-':
+                result -= term_value
+        
+        return result
+    
+    def evaluate_multiplicative_expression(self, ctx):
+        """Evalúa una expresión multiplicativa."""
+        # Evaluar primer término
+        result = self.evaluate_term(ctx.termino(0))
+        if result is None:
+            return None
+        
+        # Aplicar operadores multiplicativos
+        for i, op in enumerate(ctx.operadoresMultiplicativos()):
+            term_value = self.evaluate_term(ctx.termino(i + 1))
+            if term_value is None:
+                return None
+            
+            if op.getText() == '*':
+                result *= term_value
+            elif op.getText() == '/':
+                if term_value == 0:
+                    self.add_error(ctx, "División por cero")
+                    return None
+                result /= term_value
+            elif op.getText() == '%':
+                if term_value == 0:
+                    self.add_error(ctx, "Módulo por cero")
+                    return None
+                result %= term_value
+        
+        return result
+    
+    def evaluate_expression_aditiva(self, ctx):
+        """Evalúa una expresión aditiva (suma, resta)."""
+        # Evaluar primera expresión multiplicativa
+        result = self.evaluate_expression_multiplicativa(ctx.expresionMultiplicativa(0))
+        if result is None:
+            return None
+        
+        # Aplicar operadores aditivos (+ o -)
+        for i, op in enumerate(ctx.operadoresAditivos()):
+            term_value = self.evaluate_expression_multiplicativa(ctx.expresionMultiplicativa(i + 1))
+            if term_value is None:
+                return None
+            
+            if op.getText() == '+':
+                result += term_value
+            elif op.getText() == '-':
+                result -= term_value
+        
+        return result
+
+    def evaluate_expression_multiplicativa(self, ctx):
+        """Evalúa una expresión multiplicativa (multiplicación, división, módulo)."""
+        # Evaluar primer término
+        result = self.evaluate_term(ctx.termino(0))
+        if result is None:
+            return None
+        
+        # Aplicar operadores multiplicativos (*, /, %)
+        for i, op in enumerate(ctx.operadoresMultiplicativos()):
+            term_value = self.evaluate_term(ctx.termino(i + 1))
+            if term_value is None:
+                return None
+            
+            if op.getText() == '*':
+                result *= term_value
+            elif op.getText() == '/':
+                if term_value == 0:
+                    self.add_error(ctx, "División por cero")
+                    return None
+                result /= term_value
+            elif op.getText() == '%':
+                if term_value == 0:
+                    self.add_error(ctx, "Módulo por cero")
+                    return None
+                result %= term_value
+        
+        return result
 
     def evaluate_term(self, ctx):
         """Evalúa un término y retorna su valor si es posible."""
@@ -118,6 +228,46 @@ class SemanticAnalyzer(MiLenguajeListener):
             return self.evaluate_expression(ctx.expresion())
             
         return None
+    
+    def get_additive_expression_type(self, ctx):
+        """Determina el tipo de una expresión aditiva."""
+        # Obtener tipo de la primera expresión multiplicativa
+        result_type = self.get_multiplicative_expression_type(ctx.expresionMultiplicativa(0))
+        if result_type is None:
+            return None
+        
+        # Verificar compatibilidad con otras expresiones multiplicativas
+        for i in range(1, len(ctx.expresionMultiplicativa())):
+            mult_type = self.get_multiplicative_expression_type(ctx.expresionMultiplicativa(i))
+            if mult_type is None:
+                return None
+            
+            result_type = self.get_type_compatibility(result_type, mult_type)
+            if result_type is None:
+                self.add_error(ctx, f"Operación aritmética entre tipos incompatibles")
+                return None
+        
+        return result_type
+    
+    def get_multiplicative_expression_type(self, ctx):
+        """Determina el tipo de una expresión multiplicativa."""
+        # Obtener tipo del primer término
+        result_type = self.get_term_type(ctx.termino(0))
+        if result_type is None:
+            return None
+        
+        # Verificar compatibilidad con otros términos
+        for i in range(1, len(ctx.termino())):
+            term_type = self.get_term_type(ctx.termino(i))
+            if term_type is None:
+                return None
+            
+            result_type = self.get_type_compatibility(result_type, term_type)
+            if result_type is None:
+                self.add_error(ctx, f"Operación aritmética entre tipos incompatibles")
+                return None
+        
+        return result_type
 
     def get_expression_type(self, ctx):
         """Determina el tipo de una expresión."""
@@ -139,12 +289,12 @@ class SemanticAnalyzer(MiLenguajeListener):
             for i in range(1, len(term_types)):
                 result_type = self.get_type_compatibility(result_type, term_types[i])
                 if result_type is None:
-                    self.add_error(ctx, f"Operación aritmética entre tipos incompatibles: '{term_types[i-1]}' y '{term_types[i]}'")
+                    self.add_error(ctx, f"Operación aritmética entre tipos incompatibles")
                     return None
             
             return result_type
             
-        return None
+        return None        
 
     def get_term_type(self, ctx):
         """Determina el tipo de un término."""
@@ -303,31 +453,34 @@ class SemanticAnalyzer(MiLenguajeListener):
             self.add_error(ctx, f"Función '{name}' ya declarada")
             return
         
-        # Declarar la función en el ámbito actual
-        self.symbol_table.declare(name, return_type)
-        
-        # Crear un nuevo ámbito para los parámetros y variables locales
-        self.symbol_table.enter_scope()
-        self.current_function_type = return_type
-        self.has_return = False
-        
-        # Procesar parámetros si los hay
+        # Recopilar información de parámetros
+        params_info = []
         if ctx.parametros():
             param_ctx = ctx.parametros()
             param_types = param_ctx.tipo()
             param_names = param_ctx.ID()
             
             for i in range(len(param_types)):
-                param_type = ""
-                if param_types[i].kwEnt():
-                    param_type = "ent"
-                elif param_types[i].kwFlt():
-                    param_type = "flt"
-                elif param_types[i].kwLg():
-                    param_type = "lg"
-                elif param_types[i].kwStr():
-                    param_type = "str"
-                
+                param_type = self.get_param_type(param_types[i])
+                param_name = param_names[i].getText()
+                params_info.append((param_name, param_type))
+        
+        # Declarar la función con sus parámetros
+        self.symbol_table.declare(name, return_type, False, None, params_info)
+        
+        # Crear un nuevo ámbito para los parámetros y variables locales
+        self.symbol_table.enter_scope()
+        self.current_function_type = return_type
+        self.has_return = False
+        
+        # Declarar los parámetros en el ámbito local
+        if ctx.parametros():
+            param_ctx = ctx.parametros()
+            param_types = param_ctx.tipo()
+            param_names = param_ctx.ID()
+            
+            for i in range(len(param_types)):
+                param_type = self.get_param_type(param_types[i])
                 param_name = param_names[i].getText()
                 
                 # Verificar si ya existe en el ámbito actual
@@ -456,6 +609,20 @@ class SemanticAnalyzer(MiLenguajeListener):
             self.add_error(ctx, f"Función '{function_name}' no declarada")
             return
         
-        # Aquí se debería verificar que los parámetros coincidan, pero
-        # esto requeriría más información sobre la firma de la función
-        # que no estamos almacenando en nuestra tabla de símbolos simple.
+        # Verificar número de parámetros
+        expected_params = function.params if function.params else []
+        actual_params = ctx.expresion()
+        
+        if len(actual_params) != len(expected_params):
+            self.add_error(ctx, f"Número incorrecto de parámetros en llamada a '{function_name}': esperados {len(expected_params)}, encontrados {len(actual_params)}")
+            return
+        
+        # Verificar tipos de parámetros
+        for i, (param_name, param_type) in enumerate(expected_params):
+            expr_type = self.get_expression_type(actual_params[i])
+            if expr_type is None:
+                continue  # Ya se reportó un error
+            
+            compat_type = self.get_type_compatibility(param_type, expr_type)
+            if compat_type is None:
+                self.add_error(ctx, f"Tipo incompatible en parámetro {i+1} de '{function_name}': esperado '{param_type}', encontrado '{expr_type}'")
