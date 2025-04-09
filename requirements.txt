@@ -1,0 +1,5 @@
+pip install antlr4-python3-runtime==4.13.2
+
+para correrlo es: 
+
+python main.py test_ok.txt

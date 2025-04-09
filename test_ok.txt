@@ -1,0 +1,27 @@
+// Test minimalista para identificar problemas
+flt z = 3.14 ;
+lg n = 100l;
+
+const str me = "sdfdsf";
+
+const ent y = 4 + 4 * 6 + 4;
+
+fct sumar(ent a, ent b) : ent {
+    rtn a + b;
+}
+
+ent res = sumar(x, 5);
+clg(res);
+
+str ms = scn();
+
+ent x = 1;
+
+while(x < 10){
+    if(x == 10){
+        clg("ultimo");
+    }
+    x = x + 1;
+}
+
+
